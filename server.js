@@ -6,6 +6,7 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -14,12 +15,30 @@ app.use(express.static('public'));
 // In-memory storage (replace with database in production)
 const linkStore = new Map();
 
-// Email configuration
+// Gmail SMTP configuration - FIXED for Render
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use TLS
   auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000
+});
+
+// Verify transporter on startup
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ Email configuration error:', error.message);
+    console.log('⚠️  Make sure EMAIL_USER and EMAIL_PASS are set correctly');
+  } else {
+    console.log('✅ Gmail SMTP connection verified - ready to send emails!');
   }
 });
 
@@ -28,7 +47,6 @@ app.post('/api/generate-link', async (req, res) => {
   try {
     const { email, name } = req.body;
 
-    // Validation
     if (!email || !email.includes('@')) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
@@ -37,10 +55,7 @@ app.post('/api/generate-link', async (req, res) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    // Generate unique link ID
     const linkId = nanoid(10);
-
-    // Store link data
     const linkData = {
       id: linkId,
       email: email.toLowerCase().trim(),
@@ -51,8 +66,8 @@ app.post('/api/generate-link', async (req, res) => {
 
     linkStore.set(linkId, linkData);
 
-    console.log('✅ Generated link:', linkId); // Debug log
-    console.log('📊 Total links in storage:', linkStore.size); // Debug log
+    console.log('✅ Generated link:', linkId);
+    console.log('📊 Total links in storage:', linkStore.size);
 
     res.json({ 
       linkId,
@@ -83,7 +98,6 @@ app.get('/api/get-link', async (req, res) => {
       return res.status(404).json({ error: 'Link not found or expired' });
     }
 
-    // Check if link is expired
     if (new Date(linkData.expiresAt) < new Date()) {
       return res.status(410).json({ error: 'Link has expired' });
     }
@@ -119,7 +133,7 @@ app.post('/api/send-notification', async (req, res) => {
       : `${name} clicked the No button after 20 attempts... but don't worry, the right person is out there! 💪`;
 
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      from: `"Cute Date Invite" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: subject,
       text: text,
@@ -203,9 +217,12 @@ app.post('/api/send-notification', async (req, res) => {
       `
     };
 
+    console.log('📧 Sending email to:', email);
+    console.log('📤 Using Gmail account:', process.env.EMAIL_USER);
+    
     await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully!');
 
-    // Update link data with response
     const linkData = linkStore.get(linkId);
     if (linkData) {
       linkData.response = response;
@@ -219,10 +236,17 @@ app.post('/api/send-notification', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error('❌ Error sending notification:', error);
+    console.error('Error details:', {
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
+    
     res.status(500).json({ 
       error: 'Failed to send notification',
-      details: error.message
+      details: error.message,
+      code: error.code
     });
   }
 });
@@ -238,6 +262,8 @@ app.get('/date.html', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`📧 Make sure to set EMAIL_USER and EMAIL_PASS environment variables`);
-
+  console.log(`📧 Email service: Gmail SMTP (Port 587 with TLS)`);
+  console.log(`🔑 Required environment variables:`);
+  console.log(`   EMAIL_USER=${process.env.EMAIL_USER ? '✓ Set' : '✗ Missing'}`);
+  console.log(`   EMAIL_PASS=${process.env.EMAIL_PASS ? '✓ Set' : '✗ Missing'}`);
 });
