@@ -5,8 +5,7 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
-
+const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -240,4 +239,5 @@ app.get('/date.html', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
   console.log(`📧 Make sure to set EMAIL_USER and EMAIL_PASS environment variables`);
+
 });
