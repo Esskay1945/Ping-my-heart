@@ -1,5 +1,4 @@
 const express = require('express');
-const nodemailer = require('nodemailer');
 const { nanoid } = require('nanoid');
 const path = require('path');
 const cors = require('cors');
@@ -12,35 +11,48 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// In-memory storage (replace with database in production)
+// In-memory storage
 const linkStore = new Map();
 
-// Gmail SMTP configuration - FIXED for Render
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // Use TLS
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000
-});
+// Send email via Resend API (delivers to Gmail!)
+async function sendEmailToGmail(toEmail, subject, html, text) {
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-// Verify transporter on startup
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Email configuration error:', error.message);
-    console.log('⚠️  Make sure EMAIL_USER and EMAIL_PASS are set correctly');
-  } else {
-    console.log('✅ Gmail SMTP connection verified - ready to send emails!');
+  if (!RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY not configured');
   }
-});
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: 'Date Invite <onboarding@resend.dev>',
+      to: [toEmail],
+      subject: subject,
+      html: html,
+      text: text
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Email failed: ${error.message}`);
+  }
+
+  return await response.json();
+}
+
+// Verify on startup
+(async () => {
+  if (process.env.RESEND_API_KEY) {
+    console.log('✅ Resend API configured - emails will be sent to Gmail inbox');
+  } else {
+    console.log('⚠️  RESEND_API_KEY not set - Get one at https://resend.com');
+  }
+})();
 
 // Generate link endpoint
 app.post('/api/generate-link', async (req, res) => {
@@ -132,96 +144,89 @@ app.post('/api/send-notification', async (req, res) => {
       ? `Great news! ${name} accepted your date invite! 💕\n\nTime to plan that perfect date! 🥰`
       : `${name} clicked the No button after 20 attempts... but don't worry, the right person is out there! 💪`;
 
-    const mailOptions = {
-      from: `"Cute Date Invite" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: subject,
-      text: text,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              background-color: #f5f5f5;
-            }
-            .container {
-              max-width: 600px;
-              margin: 40px auto;
-              background: linear-gradient(135deg, #ffdde1, #ee9ca7);
-              border-radius: 20px;
-              padding: 40px;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            }
-            h1 {
-              color: #b30059;
-              font-size: 2rem;
-              margin-bottom: 20px;
-              text-align: center;
-            }
-            .message {
-              background: white;
-              padding: 30px;
-              border-radius: 15px;
-              font-size: 1.1rem;
-              color: #333;
-              line-height: 1.6;
-            }
-            .emoji {
-              font-size: 4rem;
-              text-align: center;
-              margin: 20px 0;
-            }
-            .timestamp {
-              margin-top: 20px;
-              padding-top: 20px;
-              border-top: 2px solid #ffdde1;
-              color: #666;
-              font-size: 0.9rem;
-              text-align: center;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 30px;
-              color: #b30059;
-              font-size: 0.9rem;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="emoji">${isYes ? '🎉' : '😢'}</div>
-            <h1>${subject}</h1>
-            <div class="message">
-              <p>${text}</p>
-              <div class="timestamp">
-                📅 ${new Date().toLocaleString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </div>
-            </div>
-            <div class="footer">
-              Made with ❤️ by your Cute Date Invite system
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+          }
+          .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: linear-gradient(135deg, #ffdde1, #ee9ca7);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          }
+          h1 {
+            color: #b30059;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+          }
+          .message {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            color: #333;
+            line-height: 1.6;
+          }
+          .emoji {
+            font-size: 4rem;
+            text-align: center;
+            margin: 20px 0;
+          }
+          .timestamp {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ffdde1;
+            color: #666;
+            font-size: 0.9rem;
+            text-align: center;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #b30059;
+            font-size: 0.9rem;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="emoji">${isYes ? '🎉' : '😢'}</div>
+          <h1>${subject}</h1>
+          <div class="message">
+            <p>${text}</p>
+            <div class="timestamp">
+              📅 ${new Date().toLocaleString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
             </div>
           </div>
-        </body>
-        </html>
-      `
-    };
+          <div class="footer">
+            Made with ❤️ by Ping My Heart
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-    console.log('📧 Sending email to:', email);
-    console.log('📤 Using Gmail account:', process.env.EMAIL_USER);
+    console.log('📧 Sending email to Gmail inbox:', email);
     
-    await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully!');
+    await sendEmailToGmail(email, subject, html, text);
+    console.log('✅ Email delivered to Gmail!');
 
     const linkData = linkStore.get(linkId);
     if (linkData) {
@@ -232,21 +237,15 @@ app.post('/api/send-notification', async (req, res) => {
 
     res.json({ 
       success: true,
-      message: 'Notification sent successfully!'
+      message: 'Email sent to your Gmail inbox!'
     });
 
   } catch (error) {
-    console.error('❌ Error sending notification:', error);
-    console.error('Error details:', {
-      code: error.code,
-      command: error.command,
-      response: error.response
-    });
+    console.error('❌ Error sending email:', error);
     
     res.status(500).json({ 
       error: 'Failed to send notification',
-      details: error.message,
-      code: error.code
+      details: error.message
     });
   }
 });
@@ -261,9 +260,8 @@ app.get('/date.html', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`📧 Email service: Gmail SMTP (Port 587 with TLS)`);
-  console.log(`🔑 Required environment variables:`);
-  console.log(`   EMAIL_USER=${process.env.EMAIL_USER ? '✓ Set' : '✗ Missing'}`);
-  console.log(`   EMAIL_PASS=${process.env.EMAIL_PASS ? '✓ Set' : '✗ Missing'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📧 Email delivery: Resend → Gmail Inbox`);
+  console.log(`🔑 Get your API key at: https://resend.com/api-keys`);
+  console.log(`   RESEND_API_KEY=${process.env.RESEND_API_KEY ? '✓ Set' : '✗ Missing'}`);
 });
