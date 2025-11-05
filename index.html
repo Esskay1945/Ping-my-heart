@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Your Cute Date Invite 💕</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 100%;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h1 {
+      color: #764ba2;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 0.95rem;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #764ba2;
+      box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(118, 75, 162, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result {
+      display: none;
+      margin-top: 30px;
+      padding: 20px;
+      background: #f0f7ff;
+      border-radius: 10px;
+      border: 2px solid #667eea;
+    }
+
+    .result.show {
+      display: block;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .result h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.2rem;
+    }
+
+    .link-box {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .link-input {
+      flex: 1;
+      padding: 10px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #333;
+    }
+
+    .copy-btn {
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      background: #764ba2;
+    }
+
+    .copy-btn.copied {
+      background: #4caf50;
+    }
+
+    .info {
+      margin-top: 15px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .error {
+      color: #d32f2f;
+      font-size: 0.85rem;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .emoji {
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji">💕</div>
+    <h1>Create Your Date Invite</h1>
+    <p class="subtitle">Generate a personalized link to send to your crush!</p>
+
+    <form id="generateForm">
+      <div class="input-group">
+        <label for="userEmail">Your Email Address 📧</label>
+        <input 
+          type="email" 
+          id="userEmail" 
+          placeholder="yourname@example.com" 
+          required
+        >
+        <div class="error" id="emailError">Please enter a valid email</div>
+      </div>
+
+      <div class="input-group">
+        <label for="loverName">Your Crush's Name 💖</label>
+        <input 
+          type="text" 
+          id="loverName" 
+          placeholder="e.g., Sarah, Alex" 
+          required
+          maxlength="30"
+        >
+        <div class="error" id="nameError">Please enter a name</div>
+      </div>
+
+      <button type="submit" id="generateBtn">
+        Generate My Link ✨
+      </button>
+    </form>
+
+    <div class="result" id="result">
+      <h3>🎉 Your Link is Ready!</h3>
+      <div class="link-box">
+        <input 
+          type="text" 
+          class="link-input" 
+          id="generatedLink" 
+          readonly
+        >
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <div class="info">
+        📱 Send this link to <strong id="crushName"></strong> and you'll get an email notification when they respond!
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('generateForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const result = document.getElementById('result');
+    const generatedLink = document.getElementById('generatedLink');
+    const copyBtn = document.getElementById('copyBtn');
+    const crushName = document.getElementById('crushName');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('userEmail').value.trim();
+      const name = document.getElementById('loverName').value.trim();
+
+      // Reset errors
+      document.querySelectorAll('.error').forEach(err => err.classList.remove('show'));
+
+      // Validation
+      if (!email || !email.includes('@')) {
+        document.getElementById('emailError').classList.add('show');
+        return;
+      }
+
+      if (!name) {
+        document.getElementById('nameError').classList.add('show');
+        return;
+      }
+
+      // Show loading
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<span class="loading"></span>';
+
+      try {
+        // Call API to generate link
+        const response = await fetch('/api/generate-link', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, name })
+        });
+
+        const data = await response.json();
+        console.log('Response:', data); // Debug log
+
+        if (response.ok && data.linkId) {
+          // Show result
+          const linkUrl = `http://localhost:3000/date.html?id=${data.linkId}`;
+          generatedLink.value = linkUrl;
+          crushName.textContent = name;
+          result.classList.add('show');
+          
+          console.log('Generated link:', linkUrl); // Debug log
+          
+          // Scroll to result
+          result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          console.error('Failed response:', data);
+          alert('Error: ' + (data.error || 'Failed to generate link'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Something went wrong. Check the console and make sure the server is running!');
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate My Link ✨';
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const linkValue = generatedLink.value;
+      console.log('Copying link:', linkValue); // Debug log
+      
+      // Modern clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(linkValue).then(() => {
+          copyBtn.textContent = '✓ Copied!';
+          copyBtn.classList.add('copied');
+          
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          fallbackCopy();
+        });
+      } else {
+        // Fallback for older browsers or non-HTTPS
+        fallbackCopy();
+      }
+      
+      function fallbackCopy() {
+        generatedLink.select();
+        generatedLink.setSelectionRange(0, 99999); // For mobile
+        
+        try {
+          document.execCommand('copy');
+          copyBtn.textContent = '✓ Copied!';
+          copyBtn.classList.add('copied');
+          
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        } catch (err) {
+          console.error('Fallback copy failed:', err);
+          alert('Please manually copy the link');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
